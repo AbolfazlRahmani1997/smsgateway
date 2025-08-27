@@ -1,0 +1,82 @@
+{
+  "version": 3,
+  "name": "api-gateway",
+  "port": 8088,
+  "timeout": "5s",
+  "cache_ttl": "0s",
+  "extra_config": {
+    "security/cors": {
+      "allow_origins": ["*"],
+      "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      "allow_headers": ["Authorization", "Content-Type", "X-Client-ID"],
+      "expose_headers": ["Content-Length", "Content-Type"],
+      "max_age": "12h",
+      "allow_credentials": false
+    },
+    "qos/ratelimit/proxy": { "max_rate": 1000, "capacity": 1000 },
+    "telemetry/metrics": { "type": "prometheus", "listen_address": "0.0.0.0:8090" }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/api/healthz",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_headers": ["*"],
+      "backend": [
+        {
+          "host": ["http://massage-manager:8080"],
+          "url_pattern": "/healthz",
+          "encoding": "no-op",
+          "sd": "static",
+          "timeout": "3s"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/messages",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "input_headers": ["Authorization", "Content-Type", "X-Client-ID", "Accept"],
+      "backend": [
+        {
+          "host": ["http://massage-manager:8080"],
+          "url_pattern": "/messages",
+          "method": "POST",
+          "encoding": "no-op",
+          "sd": "static",
+          "timeout": "5s"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/messages/{id}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_headers": ["Authorization", "X-Client-ID", "Accept"],
+      "backend": [
+        {
+          "host": ["http://massage-manager:8080"],
+          "url_pattern": "/messages/{id}",
+          "encoding": "no-op",
+          "sd": "static",
+          "timeout": "5s"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/messages",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_headers": ["Authorization", "X-Client-ID", "Accept"],
+      "backend": [
+        {
+          "host": ["http://massage-manager:8080"],
+          "url_pattern": "/messages",
+          "encoding": "no-op",
+          "sd": "static",
+          "timeout": "5s"
+        }
+      ]
+    }
+  ]
+}

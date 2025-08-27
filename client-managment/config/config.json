@@ -1,0 +1,10 @@
+{
+  "DATABASE_URL": "root:password@tcp(mysql-cm:3306)/cm?charset=utf8mb4&parseTime=True&loc=Local",
+  "PORT": "8081",
+  "SEED_DEMO": "1",
+  "DEMO_CLIENT_ID": "demo",
+  "DEMO_BALANCE": "1000",
+  "DEMO_NORMAL_PRICE": "1",
+  "DEMO_PRIORITY_PRICE": "2",
+  "GRPC_PORT": "9091"
+}

@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package client_manager.v1;
+option go_package = "massage-manager/gen/client_manager;client_manager";
+
+message Empty {}
+
+message CreateClientRequest { string client_id = 1; int64 initial_balance_minor = 2; int64 normal_price_minor = 3; int64 priority_price_minor = 4; }
+message CreateClientResponse { string client_id = 1; int64 balance_minor = 2; }
+
+message GetClientRequest { string client_id = 1; }
+message Client { string client_id = 1; int64 balance_minor = 2; int64 created_at_unix = 3; int64 updated_at_unix = 4; }
+message GetClientResponse { Client client = 1; }
+
+message GetPricePlanRequest { string client_id = 1; }
+message PricePlan { string client_id = 1; int64 normal_price_minor = 2; int64 priority_price_minor = 3; }
+message GetPricePlanResponse { PricePlan price_plan = 1; }
+
+message MoneyRequest { string client_id = 1; int64 amount_minor = 2; string ref = 3; }
+message MoneyResponse { int64 balance_after = 1; }
+
+service ClientManager {
+  rpc Healthz      (Empty)               returns (Empty);
+  rpc CreateClient (CreateClientRequest) returns (CreateClientResponse);
+  rpc GetClient    (GetClientRequest)    returns (GetClientResponse);
+  rpc GetPricePlan (GetPricePlanRequest) returns (GetPricePlanResponse);
+  rpc Debit        (MoneyRequest)        returns (MoneyResponse);
+  rpc Refund       (MoneyRequest)        returns (MoneyResponse);
+}

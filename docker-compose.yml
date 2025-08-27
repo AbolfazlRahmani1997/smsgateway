@@ -1,0 +1,112 @@
+version: "3.8"
+
+
+
+services:
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp=1
+      - --memory=512M
+      - --reserve-memory=0M
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
+    ports: ["9092:9092", "9644:9644"]
+
+  mysql-cm:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: cm
+    ports: ["3307:3306"]
+
+  mysql-mm:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: mm
+    ports: ["3308:3306"]
+
+  client-manager:
+    build:
+      context: ./client-managment
+      dockerfile: Dockerfile
+    environment:
+      GRPC_PORT: "9091"
+      DATABASE_URL: "root:password@tcp(mysql-cm:3306)/cm?charset=utf8mb4&parseTime=True&loc=Local"
+      SEED_DEMO: "1"
+      DEMO_CLIENT_ID: "demo"
+      DEMO_BALANCE: "1000"
+      DEMO_NORMAL_PRICE: "1"
+      DEMO_PRIORITY_PRICE: "2"
+    depends_on: [mysql-cm]
+    expose: ["9091"]
+
+  massage-manager:
+    build:
+      context: ./message-manager
+      dockerfile: Dockerfile
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "root:password@tcp(mysql-mm:3306)/mm?charset=utf8mb4&parseTime=True&loc=Local"
+      CLIENT_MANAGER_GRPC_ADDR: "client-manager:9091"
+      KAFKA_BROKERS: "redpanda:9092"
+      TOPIC_NORMAL: "sms.normal.v1"
+      TOPIC_PRIORITY: "sms.otp.v1"
+      TOPIC_STATUS: "sms.status.v1"
+      GROUP_STATUS: "message-manager-status"
+      PRICE_NORMAL: "1"
+      PRICE_PRIORITY: "2"
+    depends_on: [mysql-mm, client-manager, redpanda]
+    expose: ["8080"]
+
+  worker-normal:
+    build:
+      context: ./messenger-worker
+      dockerfile: Dockerfile
+    environment:
+      KAFKA_BROKERS: "redpanda:9092"
+      WORKER_TOPIC: "sms.normal.v1"
+      WORKER_GROUP: "masanger-normal"
+      TOPIC_STATUS: "sms.status.v1"
+      OPERATOR: "mock"
+      WORKER_NAME: "w-normal"
+      ACCEPT_LATENCY_MS: "50"
+      DELIVERY_MIN_MS: "300"
+      DELIVERY_MAX_MS: "1500"
+      FAIL_RATIO_PCT: "10"
+    depends_on: [redpanda]
+
+  worker-priority:
+    build:
+      context: messenger-worker
+      dockerfile: Dockerfile
+    environment:
+      KAFKA_BROKERS: "redpanda:9092"
+      WORKER_TOPIC: "sms.otp.v1"
+      WORKER_GROUP: "masanger-priority"
+      TOPIC_STATUS: "sms.status.v1"
+      OPERATOR: "mock"
+      WORKER_NAME: "w-priority"
+      ACCEPT_LATENCY_MS: "30"
+      DELIVERY_MIN_MS: "200"
+      DELIVERY_MAX_MS: "1200"
+      FAIL_RATIO_PCT: "5"
+    depends_on: [redpanda]
+
+  krakend:
+    image: devopsfaith/krakend:2.7
+    command: ["run", "-c", "/etc/krakend/krakend.json"]
+    volumes:
+      - ./krakend/krakend.json:/etc/krakend/krakend.json:ro
+    ports:
+      - "8088:8088"   # API Gateway
+      - "8090:8090"   # Prometheus metrics
+    depends_on:
+      - massage-manager
