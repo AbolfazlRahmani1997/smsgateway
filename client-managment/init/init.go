@@ -8,7 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// Run performs automigrate and optional seeding.
 func Run(db *gorm.DB) error {
 	type Client struct {
 		ClientID     string `gorm:"primaryKey"`
